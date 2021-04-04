@@ -4,7 +4,7 @@
  * Machine generated for CPU 'nios2_qsys_0' in SOPC Builder design 'sys'
  * SOPC Builder design path: ../../sys.sopcinfo
  *
- * Generated: Thu Oct 26 23:11:44 EEST 2017
+ * Generated: Fri Oct 05 19:59:02 EEST 2018
  */
 
 /*
@@ -62,7 +62,7 @@
 
 #define ALT_CPU_ARCHITECTURE "altera_nios2_gen2"
 #define ALT_CPU_BIG_ENDIAN 0
-#define ALT_CPU_BREAK_ADDR 0x00820820
+#define ALT_CPU_BREAK_ADDR 0x00000820
 #define ALT_CPU_CPU_ARCH_NIOS2_R1
 #define ALT_CPU_CPU_FREQ 27000000u
 #define ALT_CPU_CPU_ID_SIZE 1
@@ -72,7 +72,7 @@
 #define ALT_CPU_DCACHE_LINE_SIZE 0
 #define ALT_CPU_DCACHE_LINE_SIZE_LOG2 0
 #define ALT_CPU_DCACHE_SIZE 0
-#define ALT_CPU_EXCEPTION_ADDR 0x00810020
+#define ALT_CPU_EXCEPTION_ADDR 0x00010020
 #define ALT_CPU_FLASH_ACCELERATOR_LINES 0
 #define ALT_CPU_FLASH_ACCELERATOR_LINE_SIZE 0
 #define ALT_CPU_FLUSHDA_SUPPORTED
@@ -87,10 +87,10 @@
 #define ALT_CPU_ICACHE_LINE_SIZE 0
 #define ALT_CPU_ICACHE_LINE_SIZE_LOG2 0
 #define ALT_CPU_ICACHE_SIZE 0
-#define ALT_CPU_INST_ADDR_WIDTH 0x18
+#define ALT_CPU_INST_ADDR_WIDTH 0x11
 #define ALT_CPU_NAME "nios2_qsys_0"
 #define ALT_CPU_OCI_VERSION 1
-#define ALT_CPU_RESET_ADDR 0x00810000
+#define ALT_CPU_RESET_ADDR 0x00010000
 
 
 /*
@@ -99,7 +99,7 @@
  */
 
 #define NIOS2_BIG_ENDIAN 0
-#define NIOS2_BREAK_ADDR 0x00820820
+#define NIOS2_BREAK_ADDR 0x00000820
 #define NIOS2_CPU_ARCH_NIOS2_R1
 #define NIOS2_CPU_FREQ 27000000u
 #define NIOS2_CPU_ID_SIZE 1
@@ -109,7 +109,7 @@
 #define NIOS2_DCACHE_LINE_SIZE 0
 #define NIOS2_DCACHE_LINE_SIZE_LOG2 0
 #define NIOS2_DCACHE_SIZE 0
-#define NIOS2_EXCEPTION_ADDR 0x00810020
+#define NIOS2_EXCEPTION_ADDR 0x00010020
 #define NIOS2_FLASH_ACCELERATOR_LINES 0
 #define NIOS2_FLASH_ACCELERATOR_LINE_SIZE 0
 #define NIOS2_FLUSHDA_SUPPORTED
@@ -123,9 +123,9 @@
 #define NIOS2_ICACHE_LINE_SIZE 0
 #define NIOS2_ICACHE_LINE_SIZE_LOG2 0
 #define NIOS2_ICACHE_SIZE 0
-#define NIOS2_INST_ADDR_WIDTH 0x18
+#define NIOS2_INST_ADDR_WIDTH 0x11
 #define NIOS2_OCI_VERSION 1
-#define NIOS2_RESET_ADDR 0x00810000
+#define NIOS2_RESET_ADDR 0x00010000
 
 
 /*
@@ -133,13 +133,13 @@
  *
  */
 
-#define ALT_CI_NIOS2_HW_CRC32_0(n,A) __builtin_custom_ini(ALT_CI_NIOS2_HW_CRC32_0_N+(n&ALT_CI_NIOS2_HW_CRC32_0_N_MASK),(A))
+/*#define ALT_CI_NIOS2_HW_CRC32_0(n,A) __builtin_custom_ini(ALT_CI_NIOS2_HW_CRC32_0_N+(n&ALT_CI_NIOS2_HW_CRC32_0_N_MASK),(A))
 #define ALT_CI_NIOS2_HW_CRC32_0_N 0x0
 #define ALT_CI_NIOS2_HW_CRC32_0_N_MASK ((1<<3)-1)
 #define ALT_CI_NIOS_CUSTOM_INSTR_BITSWAP_0(A) __builtin_custom_ini(ALT_CI_NIOS_CUSTOM_INSTR_BITSWAP_0_N,(A))
 #define ALT_CI_NIOS_CUSTOM_INSTR_BITSWAP_0_N 0x9
 #define ALT_CI_NIOS_CUSTOM_INSTR_ENDIANCONVERTER_0(A) __builtin_custom_ini(ALT_CI_NIOS_CUSTOM_INSTR_ENDIANCONVERTER_0_N,(A))
-#define ALT_CI_NIOS_CUSTOM_INSTR_ENDIANCONVERTER_0_N 0x8
+#define ALT_CI_NIOS_CUSTOM_INSTR_ENDIANCONVERTER_0_N 0x8*/
 
 
 /*
@@ -151,7 +151,7 @@
 #define __ALTERA_AVALON_ONCHIP_MEMORY2
 #define __ALTERA_AVALON_PIO
 #define __ALTERA_AVALON_TIMER
-#define __ALTERA_EPCQ_CONTROLLER_MOD
+#define __ALTERA_EPCQ_CONTROLLER2
 #define __ALTERA_NIOS2_GEN2
 #define __ALTERA_NIOS_CUSTOM_INSTR_BITSWAP
 #define __ALTERA_NIOS_CUSTOM_INSTR_ENDIANCONVERTER
@@ -175,19 +175,19 @@
 #define ALT_NUM_INTERNAL_INTERRUPT_CONTROLLERS 1
 #define ALT_NUM_INTERRUPT_CONTROLLERS 1
 #define ALT_STDERR "/dev/jtag_uart_0"
-#define ALT_STDERR_BASE 0x821100
+#define ALT_STDERR_BASE 0x20020
 #define ALT_STDERR_DEV jtag_uart_0
 #define ALT_STDERR_IS_JTAG_UART
 #define ALT_STDERR_PRESENT
 #define ALT_STDERR_TYPE "altera_avalon_jtag_uart"
 #define ALT_STDIN "/dev/jtag_uart_0"
-#define ALT_STDIN_BASE 0x821100
+#define ALT_STDIN_BASE 0x20020
 #define ALT_STDIN_DEV jtag_uart_0
 #define ALT_STDIN_IS_JTAG_UART
 #define ALT_STDIN_PRESENT
 #define ALT_STDIN_TYPE "altera_avalon_jtag_uart"
 #define ALT_STDOUT "/dev/jtag_uart_0"
-#define ALT_STDOUT_BASE 0x821100
+#define ALT_STDOUT_BASE 0x20020
 #define ALT_STDOUT_DEV jtag_uart_0
 #define ALT_STDOUT_IS_JTAG_UART
 #define ALT_STDOUT_PRESENT
@@ -196,43 +196,43 @@
 
 
 /*
- * epcq_controller_0_avl_csr configuration
+ * epcq_controller2_0_avl_csr configuration
  *
  */
 
-#define ALT_MODULE_CLASS_epcq_controller_0_avl_csr altera_epcq_controller_mod
-#define EPCQ_CONTROLLER_0_AVL_CSR_BASE 0x821020
-#define EPCQ_CONTROLLER_0_AVL_CSR_FLASH_TYPE "EPCS64"
-#define EPCQ_CONTROLLER_0_AVL_CSR_IRQ 2
-#define EPCQ_CONTROLLER_0_AVL_CSR_IRQ_INTERRUPT_CONTROLLER_ID 0
-#define EPCQ_CONTROLLER_0_AVL_CSR_IS_EPCS 1
-#define EPCQ_CONTROLLER_0_AVL_CSR_NAME "/dev/epcq_controller_0_avl_csr"
-#define EPCQ_CONTROLLER_0_AVL_CSR_NUMBER_OF_SECTORS 128
-#define EPCQ_CONTROLLER_0_AVL_CSR_PAGE_SIZE 256
-#define EPCQ_CONTROLLER_0_AVL_CSR_SECTOR_SIZE 65536
-#define EPCQ_CONTROLLER_0_AVL_CSR_SPAN 32
-#define EPCQ_CONTROLLER_0_AVL_CSR_SUBSECTOR_SIZE 4096
-#define EPCQ_CONTROLLER_0_AVL_CSR_TYPE "altera_epcq_controller_mod"
+#define ALT_MODULE_CLASS_epcq_controller2_0_avl_csr altera_epcq_controller2
+#define EPCQ_CONTROLLER2_0_AVL_CSR_BASE 0x20100
+#define EPCQ_CONTROLLER2_0_AVL_CSR_FLASH_TYPE "EPCQ16"
+#define EPCQ_CONTROLLER2_0_AVL_CSR_IRQ 2
+#define EPCQ_CONTROLLER2_0_AVL_CSR_IRQ_INTERRUPT_CONTROLLER_ID 0
+#define EPCQ_CONTROLLER2_0_AVL_CSR_IS_EPCS 0
+#define EPCQ_CONTROLLER2_0_AVL_CSR_NAME "/dev/epcq_controller2_0_avl_csr"
+#define EPCQ_CONTROLLER2_0_AVL_CSR_NUMBER_OF_SECTORS 32
+#define EPCQ_CONTROLLER2_0_AVL_CSR_PAGE_SIZE 256
+#define EPCQ_CONTROLLER2_0_AVL_CSR_SECTOR_SIZE 65536
+#define EPCQ_CONTROLLER2_0_AVL_CSR_SPAN 64
+#define EPCQ_CONTROLLER2_0_AVL_CSR_SUBSECTOR_SIZE 4096
+#define EPCQ_CONTROLLER2_0_AVL_CSR_TYPE "altera_epcq_controller2"
 
 
 /*
- * epcq_controller_0_avl_mem configuration
+ * epcq_controller2_0_avl_mem configuration
  *
  */
 
-#define ALT_MODULE_CLASS_epcq_controller_0_avl_mem altera_epcq_controller_mod
-#define EPCQ_CONTROLLER_0_AVL_MEM_BASE 0x0
-#define EPCQ_CONTROLLER_0_AVL_MEM_FLASH_TYPE "EPCS64"
-#define EPCQ_CONTROLLER_0_AVL_MEM_IRQ -1
-#define EPCQ_CONTROLLER_0_AVL_MEM_IRQ_INTERRUPT_CONTROLLER_ID -1
-#define EPCQ_CONTROLLER_0_AVL_MEM_IS_EPCS 1
-#define EPCQ_CONTROLLER_0_AVL_MEM_NAME "/dev/epcq_controller_0_avl_mem"
-#define EPCQ_CONTROLLER_0_AVL_MEM_NUMBER_OF_SECTORS 128
-#define EPCQ_CONTROLLER_0_AVL_MEM_PAGE_SIZE 256
-#define EPCQ_CONTROLLER_0_AVL_MEM_SECTOR_SIZE 65536
-#define EPCQ_CONTROLLER_0_AVL_MEM_SPAN 8388608
-#define EPCQ_CONTROLLER_0_AVL_MEM_SUBSECTOR_SIZE 4096
-#define EPCQ_CONTROLLER_0_AVL_MEM_TYPE "altera_epcq_controller_mod"
+#define ALT_MODULE_CLASS_epcq_controller2_0_avl_mem altera_epcq_controller2
+#define EPCQ_CONTROLLER2_0_AVL_MEM_BASE 0x800000
+#define EPCQ_CONTROLLER2_0_AVL_MEM_FLASH_TYPE "EPCQ16"
+#define EPCQ_CONTROLLER2_0_AVL_MEM_IRQ -1
+#define EPCQ_CONTROLLER2_0_AVL_MEM_IRQ_INTERRUPT_CONTROLLER_ID -1
+#define EPCQ_CONTROLLER2_0_AVL_MEM_IS_EPCS 0
+#define EPCQ_CONTROLLER2_0_AVL_MEM_NAME "/dev/epcq_controller2_0_avl_mem"
+#define EPCQ_CONTROLLER2_0_AVL_MEM_NUMBER_OF_SECTORS 32
+#define EPCQ_CONTROLLER2_0_AVL_MEM_PAGE_SIZE 256
+#define EPCQ_CONTROLLER2_0_AVL_MEM_SECTOR_SIZE 65536
+#define EPCQ_CONTROLLER2_0_AVL_MEM_SPAN 2097152
+#define EPCQ_CONTROLLER2_0_AVL_MEM_SUBSECTOR_SIZE 4096
+#define EPCQ_CONTROLLER2_0_AVL_MEM_TYPE "altera_epcq_controller_mod"
 
 
 /*
@@ -251,7 +251,7 @@
  */
 
 #define ALT_MODULE_CLASS_i2c_opencores_0 i2c_opencores
-#define I2C_OPENCORES_0_BASE 0x821060
+#define I2C_OPENCORES_0_BASE 0x21040
 #define I2C_OPENCORES_0_IRQ 3
 #define I2C_OPENCORES_0_IRQ_INTERRUPT_CONTROLLER_ID 0
 #define I2C_OPENCORES_0_NAME "/dev/i2c_opencores_0"
@@ -265,7 +265,7 @@
  */
 
 #define ALT_MODULE_CLASS_i2c_opencores_1 i2c_opencores
-#define I2C_OPENCORES_1_BASE 0x821040
+#define I2C_OPENCORES_1_BASE 0x21020
 #define I2C_OPENCORES_1_IRQ 4
 #define I2C_OPENCORES_1_IRQ_INTERRUPT_CONTROLLER_ID 0
 #define I2C_OPENCORES_1_NAME "/dev/i2c_opencores_1"
@@ -279,15 +279,15 @@
  */
 
 #define ALT_MODULE_CLASS_jtag_uart_0 altera_avalon_jtag_uart
-#define JTAG_UART_0_BASE 0x821100
+#define JTAG_UART_0_BASE 0x20020
 #define JTAG_UART_0_IRQ 1
 #define JTAG_UART_0_IRQ_INTERRUPT_CONTROLLER_ID 0
 #define JTAG_UART_0_NAME "/dev/jtag_uart_0"
-#define JTAG_UART_0_READ_DEPTH 64
+#define JTAG_UART_0_READ_DEPTH 16
 #define JTAG_UART_0_READ_THRESHOLD 8
 #define JTAG_UART_0_SPAN 8
 #define JTAG_UART_0_TYPE "altera_avalon_jtag_uart"
-#define JTAG_UART_0_WRITE_DEPTH 64
+#define JTAG_UART_0_WRITE_DEPTH 16
 #define JTAG_UART_0_WRITE_THRESHOLD 8
 
 
@@ -299,7 +299,7 @@
 #define ALT_MODULE_CLASS_onchip_memory2_0 altera_avalon_onchip_memory2
 #define ONCHIP_MEMORY2_0_ALLOW_IN_SYSTEM_MEMORY_CONTENT_EDITOR 0
 #define ONCHIP_MEMORY2_0_ALLOW_MRAM_SIM_CONTENTS_ONLY_FILE 0
-#define ONCHIP_MEMORY2_0_BASE 0x810000
+#define ONCHIP_MEMORY2_0_BASE 0x10000
 #define ONCHIP_MEMORY2_0_CONTENTS_INFO ""
 #define ONCHIP_MEMORY2_0_DUAL_PORT 0
 #define ONCHIP_MEMORY2_0_GUI_RAM_BLOCK_TYPE "AUTO"
@@ -319,6 +319,13 @@
 #define ONCHIP_MEMORY2_0_TYPE "altera_avalon_onchip_memory2"
 #define ONCHIP_MEMORY2_0_WRITABLE 1
 
+/*
+ * hw_crc32_0 configuration
+ *
+ */
+#define ALT_MODULE_CLASS_hw_crc32_0 hw_crc32
+#define HW_CRC32_0_BASE 0x21000
+
 
 /*
  * pio_0 configuration
@@ -326,7 +333,7 @@
  */
 
 #define ALT_MODULE_CLASS_pio_0 altera_avalon_pio
-#define PIO_0_BASE 0x8210f0
+#define PIO_0_BASE 0x210e0
 #define PIO_0_BIT_CLEARING_EDGE_REGISTER 0
 #define PIO_0_BIT_MODIFYING_OUTPUT_REGISTER 0
 #define PIO_0_CAPTURE 0
@@ -353,7 +360,7 @@
  */
 
 #define ALT_MODULE_CLASS_pio_1 altera_avalon_pio
-#define PIO_1_BASE 0x8210e0
+#define PIO_1_BASE 0x210d0
 #define PIO_1_BIT_CLEARING_EDGE_REGISTER 0
 #define PIO_1_BIT_MODIFYING_OUTPUT_REGISTER 0
 #define PIO_1_CAPTURE 0
@@ -375,166 +382,31 @@
 
 
 /*
- * pio_2 configuration
+ * sc_config configuration
  *
  */
 
-#define ALT_MODULE_CLASS_pio_2 altera_avalon_pio
-#define PIO_2_BASE 0x8210d0
-#define PIO_2_BIT_CLEARING_EDGE_REGISTER 0
-#define PIO_2_BIT_MODIFYING_OUTPUT_REGISTER 0
-#define PIO_2_CAPTURE 0
-#define PIO_2_DATA_WIDTH 32
-#define PIO_2_DO_TEST_BENCH_WIRING 0
-#define PIO_2_DRIVEN_SIM_VALUE 0
-#define PIO_2_EDGE_TYPE "NONE"
-#define PIO_2_FREQ 27000000
-#define PIO_2_HAS_IN 1
-#define PIO_2_HAS_OUT 0
-#define PIO_2_HAS_TRI 0
-#define PIO_2_IRQ -1
-#define PIO_2_IRQ_INTERRUPT_CONTROLLER_ID -1
-#define PIO_2_IRQ_TYPE "NONE"
-#define PIO_2_NAME "/dev/pio_2"
-#define PIO_2_RESET_VALUE 0
-#define PIO_2_SPAN 16
-#define PIO_2_TYPE "altera_avalon_pio"
-
+#define ALT_MODULE_CLASS_sc_config_0 sc_config
+#define SC_CONFIG_0_BASE 0x22000
+#define SC_CONFIG_0_SPAN 16
 
 /*
- * pio_3 configuration
+ * osd_generator configuration
  *
  */
 
-#define ALT_MODULE_CLASS_pio_3 altera_avalon_pio
-#define PIO_3_BASE 0x8210c0
-#define PIO_3_BIT_CLEARING_EDGE_REGISTER 0
-#define PIO_3_BIT_MODIFYING_OUTPUT_REGISTER 0
-#define PIO_3_CAPTURE 0
-#define PIO_3_DATA_WIDTH 32
-#define PIO_3_DO_TEST_BENCH_WIRING 0
-#define PIO_3_DRIVEN_SIM_VALUE 0
-#define PIO_3_EDGE_TYPE "NONE"
-#define PIO_3_FREQ 27000000
-#define PIO_3_HAS_IN 0
-#define PIO_3_HAS_OUT 1
-#define PIO_3_HAS_TRI 0
-#define PIO_3_IRQ -1
-#define PIO_3_IRQ_INTERRUPT_CONTROLLER_ID -1
-#define PIO_3_IRQ_TYPE "NONE"
-#define PIO_3_NAME "/dev/pio_3"
-#define PIO_3_RESET_VALUE 0
-#define PIO_3_SPAN 16
-#define PIO_3_TYPE "altera_avalon_pio"
-
+#define ALT_MODULE_CLASS_osd_generator_0 osd_generator
+#define OSD_GENERATOR_0_BASE 0x24000
+#define OSD_GENERATOR_0_SPAN 1024
 
 /*
- * pio_4 configuration
+ * pll_reconfig configuration
  *
  */
 
-#define ALT_MODULE_CLASS_pio_4 altera_avalon_pio
-#define PIO_4_BASE 0x8210b0
-#define PIO_4_BIT_CLEARING_EDGE_REGISTER 0
-#define PIO_4_BIT_MODIFYING_OUTPUT_REGISTER 0
-#define PIO_4_CAPTURE 0
-#define PIO_4_DATA_WIDTH 32
-#define PIO_4_DO_TEST_BENCH_WIRING 0
-#define PIO_4_DRIVEN_SIM_VALUE 0
-#define PIO_4_EDGE_TYPE "NONE"
-#define PIO_4_FREQ 27000000
-#define PIO_4_HAS_IN 0
-#define PIO_4_HAS_OUT 1
-#define PIO_4_HAS_TRI 0
-#define PIO_4_IRQ -1
-#define PIO_4_IRQ_INTERRUPT_CONTROLLER_ID -1
-#define PIO_4_IRQ_TYPE "NONE"
-#define PIO_4_NAME "/dev/pio_4"
-#define PIO_4_RESET_VALUE 0
-#define PIO_4_SPAN 16
-#define PIO_4_TYPE "altera_avalon_pio"
-
-
-/*
- * pio_5 configuration
- *
- */
-
-#define ALT_MODULE_CLASS_pio_5 altera_avalon_pio
-#define PIO_5_BASE 0x8210a0
-#define PIO_5_BIT_CLEARING_EDGE_REGISTER 0
-#define PIO_5_BIT_MODIFYING_OUTPUT_REGISTER 0
-#define PIO_5_CAPTURE 0
-#define PIO_5_DATA_WIDTH 32
-#define PIO_5_DO_TEST_BENCH_WIRING 0
-#define PIO_5_DRIVEN_SIM_VALUE 0
-#define PIO_5_EDGE_TYPE "NONE"
-#define PIO_5_FREQ 27000000
-#define PIO_5_HAS_IN 0
-#define PIO_5_HAS_OUT 1
-#define PIO_5_HAS_TRI 0
-#define PIO_5_IRQ -1
-#define PIO_5_IRQ_INTERRUPT_CONTROLLER_ID -1
-#define PIO_5_IRQ_TYPE "NONE"
-#define PIO_5_NAME "/dev/pio_5"
-#define PIO_5_RESET_VALUE 0
-#define PIO_5_SPAN 16
-#define PIO_5_TYPE "altera_avalon_pio"
-
-
-/*
- * pio_6 configuration
- *
- */
-
-#define ALT_MODULE_CLASS_pio_6 altera_avalon_pio
-#define PIO_6_BASE 0x821090
-#define PIO_6_BIT_CLEARING_EDGE_REGISTER 0
-#define PIO_6_BIT_MODIFYING_OUTPUT_REGISTER 0
-#define PIO_6_CAPTURE 0
-#define PIO_6_DATA_WIDTH 32
-#define PIO_6_DO_TEST_BENCH_WIRING 0
-#define PIO_6_DRIVEN_SIM_VALUE 0
-#define PIO_6_EDGE_TYPE "NONE"
-#define PIO_6_FREQ 27000000
-#define PIO_6_HAS_IN 0
-#define PIO_6_HAS_OUT 1
-#define PIO_6_HAS_TRI 0
-#define PIO_6_IRQ -1
-#define PIO_6_IRQ_INTERRUPT_CONTROLLER_ID -1
-#define PIO_6_IRQ_TYPE "NONE"
-#define PIO_6_NAME "/dev/pio_6"
-#define PIO_6_RESET_VALUE 0
-#define PIO_6_SPAN 16
-#define PIO_6_TYPE "altera_avalon_pio"
-
-
-/*
- * pio_7 configuration
- *
- */
-
-#define ALT_MODULE_CLASS_pio_7 altera_avalon_pio
-#define PIO_7_BASE 0x821080
-#define PIO_7_BIT_CLEARING_EDGE_REGISTER 0
-#define PIO_7_BIT_MODIFYING_OUTPUT_REGISTER 0
-#define PIO_7_CAPTURE 0
-#define PIO_7_DATA_WIDTH 32
-#define PIO_7_DO_TEST_BENCH_WIRING 0
-#define PIO_7_DRIVEN_SIM_VALUE 0
-#define PIO_7_EDGE_TYPE "NONE"
-#define PIO_7_FREQ 27000000
-#define PIO_7_HAS_IN 1
-#define PIO_7_HAS_OUT 0
-#define PIO_7_HAS_TRI 0
-#define PIO_7_IRQ -1
-#define PIO_7_IRQ_INTERRUPT_CONTROLLER_ID -1
-#define PIO_7_IRQ_TYPE "NONE"
-#define PIO_7_NAME "/dev/pio_7"
-#define PIO_7_RESET_VALUE 0
-#define PIO_7_SPAN 16
-#define PIO_7_TYPE "altera_avalon_pio"
-
+#define ALT_MODULE_CLASS_pll_reconfig_0 pll_reconfig
+#define PLL_RECONFIG_0_BASE 0x28000
+#define PLL_RECONFIG_0_SPAN 8
 
 /*
  * timer_0 configuration
@@ -543,7 +415,7 @@
 
 #define ALT_MODULE_CLASS_timer_0 altera_avalon_timer
 #define TIMER_0_ALWAYS_RUN 0
-#define TIMER_0_BASE 0x821000
+#define TIMER_0_BASE 0x20000
 #define TIMER_0_COUNTER_SIZE 32
 #define TIMER_0_FIXED_PERIOD 0
 #define TIMER_0_FREQ 27000000

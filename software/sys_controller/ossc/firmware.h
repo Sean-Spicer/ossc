@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2015-2017  Markus Hiienkari <mhiienka@niksula.hut.fi>
+// Copyright (C) 2015-2019  Markus Hiienkari <mhiienka@niksula.hut.fi>
 //
 // This file is part of Open Source Scan Converter project.
 //
@@ -24,7 +24,13 @@
 #include "sysconfig.h"
 
 #define FW_VER_MAJOR            0
-#define FW_VER_MINOR            80
+#define FW_VER_MINOR            89
+
+#define PROFILE_VER_MAJOR       0
+#define PROFILE_VER_MINOR       88
+
+#define INITCFG_VER_MAJOR       0
+#define INITCFG_VER_MINOR       85
 
 #ifdef ENABLE_AUDIO
 #define FW_SUFFIX1              "a"

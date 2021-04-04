@@ -18,10 +18,12 @@
 //
 
 #include <io.h>
+#include <string.h>
 #include "sdcard.h"
-#include "lcd.h"
+#include "flash.h"
+#include "utils.h"
 
-extern char menu_row1[LCD_ROW_LEN+1], menu_row2[LCD_ROW_LEN+1];
+extern alt_flash_dev *epcq_dev;
 
 SD_DEV sdcard_dev;
 
@@ -31,8 +33,74 @@ int check_sdcard(alt_u8 *databuf)
 
     res = SD_Init(&sdcard_dev);
     printf("SD det status: %u\n", res);
-    if (res != SD_OK)
-        return res;
+    if (res == SD_OK)
+        res = SD_Read(&sdcard_dev, databuf, 0, 0, 512);
 
-    return SD_Read(&sdcard_dev, databuf, 0, 0, 512);
+    return -res;
+}
+
+int copy_sd_to_flash(alt_u32 sd_blknum, alt_u32 flash_pagenum, alt_u32 length, alt_u8 *tmpbuf)
+{
+    SDRESULTS res;
+    int retval, i;
+    alt_u32 bytes_to_rw;
+
+    while (length > 0) {
+        bytes_to_rw = (length < SD_BLK_SIZE) ? length : SD_BLK_SIZE;
+        res = SD_Read(&sdcard_dev, tmpbuf, sd_blknum, 0, bytes_to_rw);
+        if (res != SD_OK) {
+            printf("Failed to read SD card\n");
+            return -res;
+        }
+
+        if ((flash_pagenum % PAGES_PER_SECTOR) == 0) {
+            retval = alt_epcq_controller2_erase_block(epcq_dev, flash_pagenum*PAGESIZE);
+            if (retval != 0)
+                return retval;
+        }
+
+        for (i=0; i<bytes_to_rw; i++)
+            tmpbuf[i] = bitswap8(tmpbuf[i]);
+        retval = alt_epcq_controller2_write_block(epcq_dev, ((flash_pagenum/PAGES_PER_SECTOR)*SECTORSIZE), flash_pagenum*PAGESIZE, tmpbuf, bytes_to_rw);
+        if (retval != 0)
+            return retval;
+
+        ++sd_blknum;
+        flash_pagenum += bytes_to_rw/PAGESIZE;
+        length -= bytes_to_rw;
+    }
+
+    return 0;
+}
+
+int copy_flash_to_sd(alt_u32 flash_pagenum, alt_u32 sd_blknum, alt_u32 length, alt_u8 *tmpbuf)
+{
+    SDRESULTS res;
+    int retval, i;
+    alt_u32 bytes_to_rw;
+
+    while (length > 0) {
+        bytes_to_rw = (length < SD_BLK_SIZE) ? length : SD_BLK_SIZE;
+        retval = alt_epcq_controller2_read(epcq_dev, flash_pagenum*PAGESIZE, tmpbuf, bytes_to_rw);
+        for (i=0; i<bytes_to_rw; i++)
+            tmpbuf[i] = bitswap8(tmpbuf[i]);
+        if (retval != 0)
+            return retval;
+
+        if (bytes_to_rw < SD_BLK_SIZE)
+            memset(tmpbuf+bytes_to_rw, 0, SD_BLK_SIZE-bytes_to_rw);
+
+        res = SD_Write(&sdcard_dev, tmpbuf, sd_blknum);
+        if (res != SD_OK) {
+            printf("Failed to write to SD card\n");
+            return -res;
+        }
+
+        ++sd_blknum;
+        flash_pagenum += bytes_to_rw/PAGESIZE;
+        length -= bytes_to_rw;
+    }
+
+    return 0;
+
 }

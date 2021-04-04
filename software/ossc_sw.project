@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<CodeLite_Project Name="ossc_sw" InternalType="" Version="10.0.0">
+<CodeLite_Project Name="ossc_sw" InternalType="" Version="11000">
   <Plugins>
     <Plugin Name="qmake">
       <![CDATA[00020001N0005Debug0000000000000001N0007Release000000000000]]>
@@ -31,9 +31,9 @@
     <Excludepaths/>
     <Ignorefiles/>
     <Extensions>
-      <![CDATA[cpp;c;h;hpp;xrc;wxcp;fbp]]>
+      <![CDATA[*.cpp;*.c;*.h;*.hpp;*.xrc;*.wxcp;*.fbp]]>
     </Extensions>
-    <Topleveldir>../software</Topleveldir>
+    <Topleveldir>/home/markus/Code/ossc/software</Topleveldir>
   </Reconciliation>
   <VirtualDirectory Name="sys_controller">
     <VirtualDirectory Name="ths7353">
@@ -74,6 +74,8 @@
       <File Name="sys_controller/memory/sdcard.c"/>
     </VirtualDirectory>
     <VirtualDirectory Name="ossc">
+      <File Name="sys_controller/ossc/utils.h"/>
+      <File Name="sys_controller/ossc/utils.c"/>
       <File Name="sys_controller/ossc/menu.c"/>
       <File Name="sys_controller/ossc/menu.h"/>
       <File Name="sys_controller/ossc/sysconfig.h"/>
@@ -121,7 +123,7 @@
       </Compiler>
       <Linker Options="" Required="yes"/>
       <ResourceCompiler Options="" Required="no"/>
-      <General OutputFile="" IntermediateDirectory="./Debug" Command="nios2-download -g --accept-bad-sysid sys_controller.elf &amp;&amp; nios2-terminal" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(ProjectPath)/sys_controller" PauseExecWhenProcTerminates="yes" IsGUIProgram="no" IsEnabled="yes"/>
+      <General OutputFile="" IntermediateDirectory="./Debug" Command="make rv-reprogram &amp;&amp; nios2-terminal" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(ProjectPath)/sys_controller" PauseExecWhenProcTerminates="yes" IsGUIProgram="no" IsEnabled="yes"/>
       <BuildSystem Name="Default"/>
       <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
         <![CDATA[]]>
@@ -134,10 +136,12 @@
       <PreBuild/>
       <PostBuild/>
       <CustomBuild Enabled="yes">
-        <Target Name="diy-audio-debug">make ENABLE_AUDIO=y APP_CFLAGS_DEBUG_LEVEL="-DDEBUG"</Target>
+        <Target Name="compile_image_debug">make APP_CFLAGS_DEBUG_LEVEL="-DDEBUG" generate_hex</Target>
+        <Target Name="compile_image_aud-debug">make ENABLE_AUDIO=y APP_CFLAGS_DEBUG_LEVEL="-DDEBUG" generate_hex</Target>
+        <Target Name="Ack BSP update">cd ../sys_controller_bsp &amp;&amp; touch bsp_timestamp</Target>
         <RebuildCommand/>
         <CleanCommand>make clean</CleanCommand>
-        <BuildCommand>make APP_CFLAGS_DEBUG_LEVEL="-DDEBUG"</BuildCommand>
+        <BuildCommand>make APP_CFLAGS_DEBUG_LEVEL="-DDEBUG" generate_hex</BuildCommand>
         <PreprocessFileCommand/>
         <SingleFileCommand/>
         <MakefileGenerationCommand/>
@@ -161,7 +165,7 @@
       </Compiler>
       <Linker Options="-O2" Required="yes"/>
       <ResourceCompiler Options="" Required="no"/>
-      <General OutputFile="" IntermediateDirectory="./Release" Command="nios2-download -g --accept-bad-sysid sys_controller.elf" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(ProjectPath)/sys_controller" PauseExecWhenProcTerminates="no" IsGUIProgram="no" IsEnabled="yes"/>
+      <General OutputFile="" IntermediateDirectory="./Release" Command="make rv-reprogram" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(ProjectPath)/sys_controller" PauseExecWhenProcTerminates="no" IsGUIProgram="no" IsEnabled="yes"/>
       <BuildSystem Name="Default"/>
       <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
         <![CDATA[]]>
@@ -180,9 +184,10 @@
         <Target Name="compile_image">make generate_hex</Target>
         <Target Name="Build_jp">make OSDLANG=JP</Target>
         <Target Name="Build_audio">make ENABLE_AUDIO=y</Target>
+        <Target Name="Ack BSP update">cd ../sys_controller_bsp &amp;&amp; touch bsp_timestamp</Target>
         <RebuildCommand/>
         <CleanCommand>make clean</CleanCommand>
-        <BuildCommand>make</BuildCommand>
+        <BuildCommand>make ENABLE_AUDIO=y generate_hex</BuildCommand>
         <PreprocessFileCommand/>
         <SingleFileCommand/>
         <MakefileGenerationCommand/>

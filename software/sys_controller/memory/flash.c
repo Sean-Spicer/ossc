@@ -21,81 +21,45 @@
 #include <string.h>
 #include "system.h"
 #include "flash.h"
-#include "ci_crc.h"
+#include "utils.h"
 
-extern alt_epcq_controller_dev epcq_controller_0;
+// save some code space
+#define SINGLE_FLASH_INSTANCE
 
-alt_epcq_controller_dev *epcq_controller_dev;
+alt_flash_dev *epcq_dev;
 
 
-int check_flash()
+int init_flash()
 {
-    epcq_controller_dev = &epcq_controller_0;
+#ifdef SINGLE_FLASH_INSTANCE
+    extern alt_llist alt_flash_dev_list;
+    epcq_dev = (alt_flash_dev*)alt_flash_dev_list.next;
+#else
+    epcq_dev = alt_flash_open_dev(EPCQ_CONTROLLER2_0_AVL_MEM_NAME);
+#endif
 
-    if ((epcq_controller_dev == NULL) || !(epcq_controller_dev->is_epcs && (epcq_controller_dev->page_size == PAGESIZE)))
-        return -FLASH_DETECT_ERROR;
-
-    printf("Flash size in bytes: %lu\nSector size: %lu (%lu pages)\nPage size: %lu\n",
-            epcq_controller_dev->size_in_bytes, epcq_controller_dev->sector_size, epcq_controller_dev->sector_size/epcq_controller_dev->page_size, epcq_controller_dev->page_size);
-
-    return 0;
-}
-
-int read_flash(alt_u32 offset, alt_u32 length, alt_u8 *dstbuf)
-{
-    int retval, i;
-
-    retval = alt_epcq_controller_read(&epcq_controller_dev->dev, offset, dstbuf, length);
-    if (retval != 0)
-        return -FLASH_READ_ERROR;
-
-    for (i=0; i<length; i++)
-        dstbuf[i] = ALT_CI_NIOS_CUSTOM_INSTR_BITSWAP_0(dstbuf[i]) >> 24;
-
-    return 0;
-}
-
-int write_flash_page(alt_u8 *pagedata, alt_u32 length, alt_u32 pagenum)
-{
-    int retval, i;
-
-    if ((pagenum % PAGES_PER_SECTOR) == 0) {
-        printf("Erasing sector %u\n", (unsigned)(pagenum/PAGES_PER_SECTOR));
-        retval = alt_epcq_controller_erase_block(&epcq_controller_dev->dev, pagenum*PAGESIZE);
-
-        if (retval != 0) {
-            printf("Flash erase error, sector %u\nRetval %d\n", (unsigned)(pagenum/PAGES_PER_SECTOR), retval);
-            return -FLASH_ERASE_ERROR;
-        }
-    }
-
-    // Bit-reverse bytes for flash
-    for (i=0; i<length; i++)
-        pagedata[i] = ALT_CI_NIOS_CUSTOM_INSTR_BITSWAP_0(pagedata[i]) >> 24;
-
-    retval = alt_epcq_controller_write_block(&epcq_controller_dev->dev, (pagenum/PAGES_PER_SECTOR)*PAGES_PER_SECTOR*PAGESIZE, pagenum*PAGESIZE, pagedata, length);
-
-    if (retval != 0) {
-        printf("Flash write error, page %u\nRetval %d\n", (unsigned)pagenum, retval);
-        return -FLASH_WRITE_ERROR;
-    }
+    if (epcq_dev == NULL)
+        return -1;
 
     return 0;
 }
 
 int verify_flash(alt_u32 offset, alt_u32 length, alt_u32 golden_crc, alt_u8 *tmpbuf)
 {
-    alt_u32 crcval=0, i, bytes_to_read;
+    alt_u32 crcval=0, i, j, bytes_to_read;
     int retval;
 
     for (i=0; i<length; i=i+PAGESIZE) {
         bytes_to_read = ((length-i < PAGESIZE) ? (length-i) : PAGESIZE);
 
-        retval = read_flash(i, bytes_to_read, tmpbuf);
+        //retval = read_flash(i, bytes_to_read, tmpbuf);
+        retval = alt_epcq_controller2_read(epcq_dev, offset+i, tmpbuf, bytes_to_read);
+        for (j=0; j<bytes_to_read; j++)
+            tmpbuf[j] = bitswap8(tmpbuf[j]);
         if (retval != 0)
             return retval;
 
-        crcval = crcCI(tmpbuf, bytes_to_read, (i==0));
+        crcval = crc32(tmpbuf, bytes_to_read, (i==0));
     }
 
     if (crcval != golden_crc)

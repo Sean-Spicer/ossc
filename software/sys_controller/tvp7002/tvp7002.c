@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2015-2016  Markus Hiienkari <mhiienka@niksula.hut.fi>
+// Copyright (C) 2015-2018  Markus Hiienkari <mhiienka@niksula.hut.fi>
 //
 // This file is part of Open Source Scan Converter project.
 //
@@ -25,7 +25,6 @@
 #include "tvp7002.h"
 
 //#define SYNCBYPASS    // Bypass VGA syncs (for debug - needed for interlace?)
-//#define EXTADCCLK     // Use external ADC clock (external osc)
 //#define ADCPOWERDOWN  // Power-down ADCs
 //#define PLLPOSTDIV    // Double-rate PLL with div-by-2 (decrease jitter?)
 
@@ -41,42 +40,83 @@ const ypbpr_to_rgb_csc_t csc_coeffs[] = {
 static const alt_u8 Kvco[] = {75, 85, 150, 200};
 static const char *Kvco_str[] = { "Ultra low", "Low", "Medium", "High" };
 
-static void tvp_set_clamp(video_format fmt)
+static void tvp_set_clamp_type(video_format fmt)
 {
+    alt_u8 status = tvp_readreg(TVP_SOGTHOLD) & 0xF8;
+
     switch (fmt) {
     case FORMAT_YPbPr:
         //select mid clamp for Pb & Pr
-        tvp_writereg(TVP_SOGTHOLD, 0x5D);
+        status |= 0x5;
         break;
     case FORMAT_RGBS:
     case FORMAT_RGBHV:
     case FORMAT_RGsB:
     default:
         //select bottom clamp (RGB)
-        tvp_writereg(TVP_SOGTHOLD, 0x58);
         break;
     }
+    tvp_writereg(TVP_SOGTHOLD, status);
 }
 
-static void tvp_set_clamp_position(video_type type, alt_u8 h_syncinlen)
+static void tvp_set_clamp_alc(video_type type, alt_u8 clamp_ref_offset, alt_8 clamp_user_offset, alt_u8 en_alc)
 {
+    alt_16 clamp_pos = clamp_ref_offset + clamp_user_offset;
+    alt_u8 clamp_width, alc_offset;
+
     switch (type) {
     case VIDEO_LDTV:
-        tvp_writereg(TVP_CLAMPSTART, h_syncinlen+0x2);
-        tvp_writereg(TVP_CLAMPWIDTH, 0x6);
+        clamp_pos += 2;
+        clamp_width = 6;
+        alc_offset = 1;
         break;
     case VIDEO_HDTV:
-        tvp_writereg(TVP_CLAMPSTART, h_syncinlen+0x32);
-        tvp_writereg(TVP_CLAMPWIDTH, 0x20);
+        clamp_pos += 50;
+        clamp_width = 32;
+        alc_offset = 8;
         break;
     case VIDEO_SDTV:
     case VIDEO_EDTV:
     case VIDEO_PC:
     default:
-        tvp_writereg(TVP_CLAMPSTART, h_syncinlen+0x6);
-        tvp_writereg(TVP_CLAMPWIDTH, 0x10);
+        clamp_pos += 6;
+        clamp_width = 16;
+        alc_offset = 2;
         break;
     }
+
+    // Make sure clamp and ALC positions are within 8bit range
+    if (clamp_pos < 0)
+        clamp_pos = 0;
+    else if (clamp_pos + clamp_width + alc_offset > 255)
+        clamp_pos = 255 - alc_offset - clamp_width;
+
+    tvp_writereg(TVP_CLAMPSTART, (alt_u8)clamp_pos);
+    tvp_writereg(TVP_CLAMPWIDTH, clamp_width);
+
+    if (en_alc) {
+        tvp_writereg(TVP_ALCEN, 0x80); //enable ALC
+        tvp_writereg(TVP_ALCPLACE, clamp_pos+clamp_width+alc_offset);
+    } else {
+        tvp_writereg(TVP_ALCEN, 0x00); //disable ALC
+    }
+}
+
+static void tvp_sel_clk(tvp_refclk_t refclk, alt_u8 ext_pclk)
+{
+    alt_u8 status = tvp_readreg(TVP_INPMUX2) & 0xF5;
+
+    //TODO: set SOG and CLP LPF based on mode
+    if (refclk == REFCLK_EXT27) {
+        status |= 0x8;
+
+        if (!ext_pclk)
+            status |= 0x2;
+    } else {
+        status |= 0x2;
+    }
+
+    tvp_writereg(TVP_INPMUX2, status);
 }
 
 inline alt_u32 tvp_readreg(alt_u32 regaddr)
@@ -142,13 +182,23 @@ inline void tvp_set_ssthold(alt_u8 vsdetect_thold)
 
 void tvp_init()
 {
+    color_setup_t def_gain_offs = {
+        .r_f_gain = DEFAULT_FINE_GAIN,
+        .g_f_gain = DEFAULT_FINE_GAIN,
+        .b_f_gain = DEFAULT_FINE_GAIN,
+        .r_f_off = DEFAULT_FINE_OFFSET,
+        .g_f_off = DEFAULT_FINE_OFFSET,
+        .b_f_off = DEFAULT_FINE_OFFSET,
+        .c_gain = DEFAULT_COARSE_GAIN,
+    };
+
     // disable output
     tvp_disable_output();
 
-    //Set global defaults
+    // Set default configuration (skip those which match register reset values)
 
-    // Configure external refclk
-    tvp_sel_clk(REFCLK_EXT27);
+    // Configure external refclk, HPLL generated pclk
+    tvp_sel_clk(REFCLK_EXT27, 0);
 
     // Hsync input->output delay (horizontal shift)
     // Default is 13, which maintains alignment of RGB and hsync at output
@@ -162,11 +212,11 @@ void tvp_init()
     tvp_sel_csc(&csc_coeffs[0]);
 
     // Set default phase
-    tvp_set_hpll_phase(0x10, 1);
+    //tvp_set_hpll_phase(DEFAULT_SAMPLER_PHASE, 1);
 
-    // Set min LPF
-    tvp_set_lpf(0);
-    tvp_set_sync_lpf(0);
+    // Set min video LPF, max sync LPF
+    //tvp_set_lpf(0);
+    tvp_set_sync_lpf(DEFAULT_SYNC_LPF);
 
     // Increase line length tolerance
     tvp_set_linelen_tol(DEFAULT_LINELEN_TOL);
@@ -177,20 +227,26 @@ void tvp_init()
     //tvp_writereg(TVP_OUTFORMAT, 0x0C);
 
     // Minimize HSYNC window for best sync stability
-    tvp_writereg(TVP_MVSWIDTH, 0x03);
+    //tvp_writereg(TVP_MVSWIDTH, 0x03);
 
     // Common sync separator threshold
     // Some arcade games need more that the default 0x40
     tvp_set_ssthold(DEFAULT_VSYNC_THOLD);
 
-    //set analog (coarse) gain to max recommended value (-> 91% of the ADC range with 0.7Vpp input)
-    tvp_writereg(TVP_BG_CGAIN, 0x88);
-    tvp_writereg(TVP_R_CGAIN, 0x08);
+    // Analog sync/SoG thresholf
+    //tvp_set_sog_thold(DEFAULT_SYNC_VTH);
 
+    // Default (3,3) coast may lead to PLL jitter and sync loss (e.g. SNES)
+    tvp_set_hpllcoast(DEFAULT_PRE_COAST, DEFAULT_POST_COAST);
+
+    //set analog (coarse) gain to max recommended value (-> 91% of the ADC range with 0.7Vpp input)
     //set rest of the gain digitally (fine) to utilize 100% of the range at the output (0.91*(1+(26/256)) = 1)
+    tvp_set_gain_offset(&def_gain_offs);
 }
 
-void tvp_set_fine_gain_offset(color_setup_t *col) {
+void tvp_set_gain_offset(color_setup_t *col) {
+    tvp_writereg(TVP_BG_CGAIN, ((col->c_gain << 4) | col->c_gain));
+    tvp_writereg(TVP_R_CGAIN, col->c_gain);
     tvp_writereg(TVP_R_FGAIN, col->r_f_gain);
     tvp_writereg(TVP_G_FGAIN, col->g_f_gain);
     tvp_writereg(TVP_B_FGAIN, col->b_f_gain);
@@ -243,22 +299,6 @@ void tvp_setup_hpll(alt_u16 h_samplerate, alt_u16 refclks_per_line, alt_u8 plldi
     tvp_writereg(TVP_HPLLCTRL, ((vco_range << 6) | (cp_current << 3)));
 }
 
-void tvp_sel_clk(tvp_refclk_t refclk)
-{
-    alt_u8 status = tvp_readreg(TVP_INPMUX2) & 0xFA;
-
-    //TODO: set SOG and CLP LPF based on mode
-    if (refclk == REFCLK_INTCLK) {
-        tvp_writereg(TVP_INPMUX2, status|0x2);
-    } else {
-#ifdef EXTADCCLK
-        tvp_writereg(TVP_INPMUX2, status|0x8);
-#else
-        tvp_writereg(TVP_INPMUX2, status|0xA);
-#endif
-    }
-}
-
 void tvp_sel_csc(const ypbpr_to_rgb_csc_t *csc)
 {
     tvp_writereg(TVP_CSC1HI, (csc->G_Y >> 8));
@@ -293,8 +333,15 @@ void tvp_set_lpf(alt_u8 val)
 void tvp_set_sync_lpf(alt_u8 val)
 {
     alt_u8 status = tvp_readreg(TVP_INPMUX2) & 0x3F;
-    tvp_writereg(TVP_INPMUX2, status|((3-val)<<6));
-    printf("Sync LPF value set to 0x%x\n", (3-val));
+    tvp_writereg(TVP_INPMUX2, status|(val<<6));
+    printf("Sync LPF value set to 0x%x\n", val);
+}
+
+void tvp_set_clp_lpf(alt_u8 val)
+{
+    alt_u8 status = tvp_readreg(TVP_INPMUX2) & 0xCF;
+    tvp_writereg(TVP_INPMUX2, status|(val<<4));
+    printf("CLP LPF value set to 0x%x\n", val);
 }
 
 alt_u8 tvp_set_hpll_phase(alt_u8 val, alt_u8 sample_mult)
@@ -317,38 +364,17 @@ void tvp_set_sog_thold(alt_u8 val)
     printf("SOG thold set to 0x%x\n", val);
 }
 
-void tvp_set_alc(alt_u8 en_alc, video_type type, alt_u8 h_syncinlen)
-{
-    if (en_alc) {
-        tvp_writereg(TVP_ALCEN, 0x80); //enable ALC
-
-        //select ALC placement
-        switch (type) {
-        case VIDEO_LDTV:
-            tvp_writereg(TVP_ALCPLACE, h_syncinlen+0x9);
-            break;
-        case VIDEO_HDTV:
-            tvp_writereg(TVP_ALCPLACE, h_syncinlen+0x5A);
-            break;
-        case VIDEO_SDTV:
-        case VIDEO_EDTV:
-        case VIDEO_PC:
-        default:
-            tvp_writereg(TVP_ALCPLACE, h_syncinlen+0x18);
-            break;
-        }
-    } else {
-        tvp_writereg(TVP_ALCEN, 0x00); //disable ALC
-    }
+void tvp_set_alcfilt(alt_u8 nsv, alt_u8 nsh) {
+    tvp_writereg(TVP_ALCFILT, (nsv<<3)|nsh);
 }
 
-void tvp_source_setup(video_type type, alt_u16 h_samplerate, alt_u16 refclks_per_line, alt_u8 plldivby2, alt_u8 h_syncinlen, alt_u8 pre_coast, alt_u8 post_coast, alt_u8 vsync_thold)
+void tvp_source_setup(video_type type, alt_u16 h_samplerate, alt_u16 refclks_per_line, alt_u8 plldivby2, alt_u8 h_synclen_px, alt_8 clamp_user_offset)
 {
-    // Clamp position and ALC
-    tvp_set_clamp_position(type, h_syncinlen);
-    tvp_set_alc(1, type, h_syncinlen);
+    // Due to short MVS width, clamp reference starts prematurely (at the end of MVS window). Adjust offset so that reference moves back to hsync trailing edge.
+    alt_u8 clamp_ref_offset = h_synclen_px - (((30*h_samplerate)/refclks_per_line)+5)/10;
 
-    tvp_set_ssthold(vsync_thold);
+    // Clamp and ALC
+    tvp_set_clamp_alc(type, clamp_ref_offset, clamp_user_offset, 1);
 
     // Setup Macrovision stripper and H-PLL coast signal.
     // Coast needs to be enabled when HSYNC is missing during VSYNC. RGBHV mode cannot use it, so turn off the internal signal for this mode.
@@ -367,32 +393,21 @@ void tvp_source_setup(video_type type, alt_u16 h_samplerate, alt_u16 refclks_per
     }
 
     tvp_setup_hpll(h_samplerate, refclks_per_line, plldivby2);
-
-    // Default (3,3) coast may lead to PLL jitter and sync loss (e.g. SNES)
-    tvp_set_hpllcoast(pre_coast, post_coast);
 }
 
-void tvp_source_sel(tvp_input_t input, video_format fmt)
+void tvp_source_sel(tvp_input_t input, tvp_sync_input_t syncinput, video_format fmt)
 {
     alt_u8 sync_status;
-    alt_u8 sog_ch;
-
-    if ((fmt == FORMAT_RGsB) || (fmt == FORMAT_YPbPr))
-        sog_ch = (input == TVP_INPUT3) ? 2 : 0;
-    else if ((input == TVP_INPUT1) && (fmt == FORMAT_RGBS))
-        sog_ch = 1;
-    else
-        sog_ch = 2;
 
     // RGB+SOG input select
-    tvp_writereg(TVP_INPMUX1, (sog_ch<<6) | (input<<4) | (input<<2) | input);
+    tvp_writereg(TVP_INPMUX1, (((syncinput <= TVP_SOG3) ? syncinput : 0)<<6) | (input<<4) | (input<<2) | input);
 
     // Clamp setup
-    tvp_set_clamp(fmt);
+    tvp_set_clamp_type(fmt);
 
     // HV/SOG sync select
-    if ((input == TVP_INPUT3) && ((fmt == FORMAT_RGBHV) || (fmt == FORMAT_RGBS))) {
-        if (fmt == FORMAT_RGBHV)
+    if (syncinput > TVP_SOG3) {
+        if (syncinput < TVP_CS_A)
             tvp_writereg(TVP_SYNCCTRL1, 0x52);
         else // RGBS
             tvp_writereg(TVP_SYNCCTRL1, 0x53);
@@ -431,16 +446,16 @@ void tvp_source_sel(tvp_input_t input, video_format fmt)
     printf("\n");
 }
 
-alt_u8 tvp_check_sync(tvp_input_t input, video_format fmt)
+alt_u8 tvp_check_sync(tvp_sync_input_t syncinput)
 {
     alt_u8 sync_status;
 
     sync_status = tvp_readreg(TVP_SYNCSTAT);
 
-    if ((input == TVP_INPUT3) && (fmt == FORMAT_RGBHV))
-        return ((sync_status & 0x90) == 0x90);
-    else if ((input == TVP_INPUT3) && (fmt == FORMAT_RGBS))
+    if (syncinput >= TVP_CS_A)
         return ((sync_status & 0x88) == 0x88);
+    else if (syncinput >= TVP_HV_A)
+        return ((sync_status & 0x90) == 0x90);
     else
         return !!(sync_status & (1<<1));
 }

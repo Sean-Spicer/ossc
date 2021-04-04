@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2015-2017  Markus Hiienkari <mhiienka@niksula.hut.fi>
+// Copyright (C) 2015-2019  Markus Hiienkari <mhiienka@niksula.hut.fi>
 //
 // This file is part of Open Source Scan Converter project.
 //
@@ -25,6 +25,7 @@
 #include "av_controller.h"
 #include "video_modes.h"
 #include "userdata.h"
+#include "firmware.h"
 #include "lcd.h"
 #include "altera_avalon_pio_regs.h"
 
@@ -37,13 +38,21 @@ const alt_u16 rc_keymap_default[REMOTE_MAX_KEYS] = {0x3E29, 0x3EA9, 0x3E69, 0x3E
 alt_u16 rc_keymap[REMOTE_MAX_KEYS];
 
 extern char menu_row1[LCD_ROW_LEN+1], menu_row2[LCD_ROW_LEN+1];
-extern const mode_data_t video_modes[];
+extern mode_data_t video_modes[];
 extern avmode_t cm;
 extern avconfig_t tc;
 extern avinput_t target_input;
 extern alt_u8 menu_active;
 extern alt_u16 sys_ctrl;
-extern alt_u8 profile_sel;
+extern alt_u16 tc_sampler_phase;
+extern alt_u8 profile_sel, profile_sel_menu;
+extern alt_u8 lcd_bl_timeout;
+extern alt_u8 update_cur_vm, vm_edit;
+extern volatile sc_regs *sc;
+extern volatile osd_regs *osd;
+
+extern menu_t menu_scanlines, menu_advtiming;
+extern char target_profile_name[PROFILE_NAME_LEN+1];
 
 alt_u32 remote_code;
 alt_u8 remote_rpt, remote_rpt_prev;
@@ -57,7 +66,8 @@ void setup_rc()
     for (i=0; i<REMOTE_MAX_KEYS; i++) {
         strncpy(menu_row1, "Press", LCD_ROW_LEN+1);
         strncpy(menu_row2, rc_keydesc[i], LCD_ROW_LEN+1);
-        lcd_write_menu();
+        osd->osd_config.menu_active = 1;
+        ui_disp_menu(1);
         confirm = 0;
 
         while (1) {
@@ -68,14 +78,14 @@ void setup_rc()
                 if (confirm == 0) {
                     rc_keymap[i] = remote_code;
                     strncpy(menu_row1, "Confirm", LCD_ROW_LEN+1);
-                    lcd_write_menu();
+                    ui_disp_menu(1);
                     confirm = 1;
                 } else {
                     if (remote_code == rc_keymap[i]) {
                         confirm = 2;
                     } else {
                         strncpy(menu_row1, "Mismatch, retry", LCD_ROW_LEN+1);
-                        lcd_write_menu();
+                        ui_disp_menu(1);
                         confirm = 0;
                     }
                 }
@@ -101,22 +111,31 @@ void setup_rc()
         }
     }
     write_userdata(INIT_CONFIG_SLOT);
+
+    osd->osd_config.menu_active = 0;
 }
 
-void parse_control()
+int parse_control()
 {
-    int i;
-    alt_u32 btn_vec;
+    int i, prof_x10=0, ret=0, retval;
+    alt_u32 btn_vec, btn_vec_prev=1;
     alt_u8 pt_only = 0;
+    avinput_t man_target_input = AV_LAST;
+
+    sc_status_reg sc_status;
+    sc_status2_reg sc_status2;
+    alt_u32 fpga_v_hz_x100;
 
     // one for each video_group
     alt_u8* pmcfg_ptr[] = { &pt_only, &tc.pm_240p, &tc.pm_384p, &tc.pm_480i, &tc.pm_480p, &tc.pm_480p, &tc.pm_1080i };
     alt_u8 valid_pm[] = { 0x1, 0x1f, 0x3, 0xf, 0x3, 0x3, 0x3 };
 
+    avinput_t next_input = (cm.avinput == AV3_YPBPR) ? AV1_RGBs : (cm.avinput+1);
+
     if (remote_code)
         printf("RCODE: 0x%.4lx, %d\n", remote_code, remote_rpt);
 
-    if (btn_code_prev == 0 && btn_code != 0)
+    if (btn_code)
         printf("BCODE: 0x%.2lx\n", btn_code>>16);
 
     for (i = RC_BTN1; i < REMOTE_MAX_KEYS; i++) {
@@ -127,43 +146,111 @@ void parse_control()
     }
 
     switch (i) {
-        case RC_BTN1: target_input = AV1_RGBs; break;
-        case RC_BTN4: target_input = AV1_RGsB; break;
-        case RC_BTN7: target_input = AV1_YPBPR; break;
-        case RC_BTN2: target_input = AV2_YPBPR; break;
-        case RC_BTN5: target_input = AV2_RGsB; break;
-        case RC_BTN3: target_input = AV3_RGBHV; break;
-        case RC_BTN6: target_input = AV3_RGBs; break;
-        case RC_BTN9: target_input = AV3_RGsB; break;
-        case RC_BTN0: target_input = AV3_YPBPR; break;
+        case RC_BTN1: man_target_input = AV1_RGBs; break;
+        case RC_BTN4: man_target_input = AV1_RGsB; break;
+        case RC_BTN7: man_target_input = AV1_YPBPR; break;
+        case RC_BTN2: man_target_input = AV2_YPBPR; break;
+        case RC_BTN5: man_target_input = AV2_RGsB; break;
+        case RC_BTN3: man_target_input = AV3_RGBHV; break;
+        case RC_BTN6: man_target_input = AV3_RGBs; break;
+        case RC_BTN9: man_target_input = AV3_RGsB; break;
+        case RC_BTN0: man_target_input = AV3_YPBPR; break;
         case RC_MENU:
             menu_active = !menu_active;
+            osd->osd_config.menu_active = menu_active;
+            profile_sel_menu = profile_sel;
 
-            if (menu_active)
+            if (menu_active) {
+                render_osd_page();
                 display_menu(1);
-            else
-                lcd_write_status();
+            } else {
+                ui_disp_status(0);
+            }
 
             break;
         case RC_INFO:
-            sniprintf(menu_row1, LCD_ROW_LEN+1, "VMod: %s", video_modes[cm.id].name);
-            sniprintf(menu_row2, LCD_ROW_LEN+1, "LC: %u VSM: %u", (IORD_ALTERA_AVALON_PIO_DATA(PIO_2_BASE) & 0x7ff)+1, (IORD_ALTERA_AVALON_PIO_DATA(PIO_2_BASE) >> 16) & 0x3);
-            lcd_write_menu();
-            printf("Mod: %s\n", video_modes[cm.id].name);
-            printf("Lines: %u M: %u\n", (IORD_ALTERA_AVALON_PIO_DATA(PIO_2_BASE) & 0x7ff)+1, cm.macrovis);
+            sc_status = sc->sc_status;
+            sc_status2 = sc->sc_status2;
+            fpga_v_hz_x100 = (100*TVP_EXTCLK_HZ)/sc_status2.pcnt_frame;
+
+            if (!menu_active) {
+                memset((void*)osd->osd_array.data, 0, sizeof(osd_char_array));
+                read_userdata(profile_sel, 1);
+                sniprintf((char*)osd->osd_array.data[0][0], OSD_CHAR_COLS, "Profile:");
+                sniprintf((char*)osd->osd_array.data[0][1], OSD_CHAR_COLS, "%u: %s", profile_sel, (target_profile_name[0] == 0) ? "<empty>" : target_profile_name);
+                if (cm.sync_active) {
+                    sniprintf((char*)osd->osd_array.data[1][0], OSD_CHAR_COLS, "Mode preset:");
+                    sniprintf((char*)osd->osd_array.data[1][1], OSD_CHAR_COLS, "%s", video_modes[cm.id].name);
+                    sniprintf((char*)osd->osd_array.data[2][0], OSD_CHAR_COLS, "Imode (FPGA):");
+                    sniprintf((char*)osd->osd_array.data[2][1], OSD_CHAR_COLS, "%lu-%c%c %lu.%.2luHz", (unsigned long)((sc_status.vmax+1)<<sc_status.interlace_flag)+sc_status.interlace_flag,
+                                                                             sc_status.interlace_flag ? 'i' : 'p',
+                                                                             sc_status.fpga_vsyncgen ? '*' : ' ',
+                                                                             fpga_v_hz_x100/100,
+                                                                             fpga_v_hz_x100%100);
+                    sniprintf((char*)osd->osd_array.data[3][0], OSD_CHAR_COLS, "Ccnt / frame:");
+                    sniprintf((char*)osd->osd_array.data[3][1], OSD_CHAR_COLS, "%lu", (unsigned long)sc_status2.pcnt_frame);
+                }
+                sniprintf((char*)osd->osd_array.data[4][0], OSD_CHAR_COLS, "Firmware:");
+                sniprintf((char*)osd->osd_array.data[4][1], OSD_CHAR_COLS, "%u.%.2u" FW_SUFFIX1 FW_SUFFIX2, FW_VER_MAJOR, FW_VER_MINOR);
+                osd->osd_config.status_refresh = 1;
+                osd->osd_row_color.mask = 0;
+                osd->osd_sec_enable[0].mask = 0x1f;
+                osd->osd_sec_enable[1].mask = 0x1f;
+            }
             break;
         case RC_LCDBL:
             sys_ctrl ^= LCD_BL;
-            IOWR_ALTERA_AVALON_PIO_DATA(PIO_0_BASE, sys_ctrl);
             break;
-        case RC_SL_MODE: tc.sl_mode = (tc.sl_mode < SL_MODE_MAX) ? (tc.sl_mode + 1) : 0; break;
-        case RC_SL_TYPE: tc.sl_type = (tc.sl_type < SL_TYPE_MAX) ? (tc.sl_type + 1) : 0; break;
-        case RC_SL_MINUS: tc.sl_str = tc.sl_str ? (tc.sl_str - 1) : 0; break;
-        case RC_SL_PLUS: tc.sl_str = (tc.sl_str < SCANLINESTR_MAX) ? (tc.sl_str + 1) : SCANLINESTR_MAX; break;
+        case RC_SL_MODE:
+            tc.sl_mode = (tc.sl_mode < SL_MODE_MAX) ? (tc.sl_mode + 1) : 0;
+            if (!menu_active) {
+                strncpy((char*)osd->osd_array.data[0][0], menu_scanlines.items[0].name, OSD_CHAR_COLS);
+                strncpy((char*)osd->osd_array.data[1][0], menu_scanlines.items[0].sel.setting_str[tc.sl_mode], OSD_CHAR_COLS);
+                osd->osd_config.status_refresh = 1;
+                osd->osd_row_color.mask = 0;
+                osd->osd_sec_enable[0].mask = 3;
+                osd->osd_sec_enable[1].mask = 0;
+            } else if (get_current_menunavi()->m == &menu_scanlines) {
+                render_osd_page();
+            }
+            break;
+        case RC_SL_TYPE:
+            tc.sl_type = (tc.sl_type < SL_TYPE_MAX) ? (tc.sl_type + 1) : 0;
+            if (!menu_active) {
+                strncpy((char*)osd->osd_array.data[0][0], menu_scanlines.items[7].name, OSD_CHAR_COLS);
+                strncpy((char*)osd->osd_array.data[1][0], menu_scanlines.items[7].sel.setting_str[tc.sl_type], OSD_CHAR_COLS);
+                osd->osd_config.status_refresh = 1;
+                osd->osd_row_color.mask = 0;
+                osd->osd_sec_enable[0].mask = 3;
+                osd->osd_sec_enable[1].mask = 0;
+            } else if (get_current_menunavi()->m == &menu_scanlines) {
+                render_osd_page();
+            }
+            break;
+        case RC_SL_MINUS:
+        case RC_SL_PLUS:
+            if (i == RC_SL_MINUS)
+                tc.sl_str = tc.sl_str ? (tc.sl_str - 1) : 0;
+            else
+                tc.sl_str = (tc.sl_str < SCANLINESTR_MAX) ? (tc.sl_str + 1) : SCANLINESTR_MAX;
+
+            if (!menu_active) {
+                strncpy((char*)osd->osd_array.data[0][0], menu_scanlines.items[1].name, OSD_CHAR_COLS);
+                menu_scanlines.items[1].num.df(tc.sl_str);
+                strncpy((char*)osd->osd_array.data[1][0], menu_row2, OSD_CHAR_COLS);
+                osd->osd_config.status_refresh = 1;
+                osd->osd_row_color.mask = 0;
+                osd->osd_sec_enable[0].mask = 3;
+                osd->osd_sec_enable[1].mask = 0;
+            } else if (get_current_menunavi()->m == &menu_scanlines) {
+                render_osd_page();
+            }
+            break;
         case RC_LM_MODE:
             strncpy(menu_row1, "Linemult mode:", LCD_ROW_LEN+1);
             strncpy(menu_row2, "press 1-5", LCD_ROW_LEN+1);
-            lcd_write_menu();
+            osd->osd_config.menu_active = 1;
+            ui_disp_menu(1);
 
             while (1) {
                 btn_vec = IORD_ALTERA_AVALON_PIO_DATA(PIO_1_BASE) & RC_MASK;
@@ -182,7 +269,7 @@ void parse_control()
                         *pmcfg_ptr[video_modes[cm.id].group] = i;
                     } else {
                         sniprintf(menu_row2, LCD_ROW_LEN+1, "%ux unsupported", i+1);
-                        lcd_write_menu();
+                        ui_disp_menu(1);
                         usleep(500000);
                     }
                     break;
@@ -192,44 +279,98 @@ void parse_control()
 
                 usleep(WAITLOOP_SLEEP_US);
             }
-            lcd_write_status();
             menu_active = 0;
+            osd->osd_config.menu_active = 0;
+            ui_disp_status(0);
             break;
-        case RC_PHASE_PLUS: tc.sampler_phase = (tc.sampler_phase < SAMPLER_PHASE_MAX) ? (tc.sampler_phase + 1) : 0; break;
-        case RC_PHASE_MINUS: tc.sampler_phase = tc.sampler_phase ? (tc.sampler_phase - 1) : SAMPLER_PHASE_MAX; break;
+        case RC_PHASE_MINUS:
+        case RC_PHASE_PLUS:
+            if (i == RC_PHASE_MINUS)
+                video_modes[cm.id].sampler_phase = video_modes[cm.id].sampler_phase ? (video_modes[cm.id].sampler_phase - 1) : SAMPLER_PHASE_MAX;
+            else
+                video_modes[cm.id].sampler_phase = (video_modes[cm.id].sampler_phase < SAMPLER_PHASE_MAX) ? (video_modes[cm.id].sampler_phase + 1) : 0;
+
+            update_cur_vm = 1;
+            if (cm.id == vm_edit)
+                tc_sampler_phase = video_modes[vm_edit].sampler_phase;
+
+            if (!menu_active) {
+                strncpy((char*)osd->osd_array.data[0][0], menu_advtiming.items[8].name, OSD_CHAR_COLS);
+                sniprintf(menu_row2, LCD_ROW_LEN+1, "%d deg", (video_modes[cm.id].sampler_phase*1125)/100);
+                strncpy((char*)osd->osd_array.data[1][0], menu_row2, OSD_CHAR_COLS);
+                osd->osd_config.status_refresh = 1;
+                osd->osd_row_color.mask = 0;
+                osd->osd_sec_enable[0].mask = 3;
+                osd->osd_sec_enable[1].mask = 0;
+            } else if (get_current_menunavi()->m == &menu_advtiming) {
+                render_osd_page();
+            }
+            break;
         case RC_PROF_HOTKEY:
+Prof_Hotkey_Prompt:
             strncpy(menu_row1, "Profile load:", LCD_ROW_LEN+1);
-            strncpy(menu_row2, "press 0-9", LCD_ROW_LEN+1);
-            lcd_write_menu();
+            sniprintf(menu_row2, LCD_ROW_LEN+1, "press %u-%u", prof_x10*10, ((prof_x10*10+9) > MAX_PROFILE) ? MAX_PROFILE : (prof_x10*10+9));
+            osd->osd_config.menu_active = 1;
+            ui_disp_menu(1);
 
             while (1) {
                 btn_vec = IORD_ALTERA_AVALON_PIO_DATA(PIO_1_BASE) & RC_MASK;
-                for (i = RC_BTN1; i < REMOTE_MAX_KEYS; i++) {
-                    if (btn_vec == rc_keymap[i])
+
+                if ((btn_vec_prev == 0) && (btn_vec != 0)) {
+                    for (i = RC_BTN1; i < REMOTE_MAX_KEYS; i++) {
+                        if (btn_vec == rc_keymap[i])
+                            break;
+                    }
+
+                    if ((i == RC_BTN0) || (i < (RC_BTN1 + (prof_x10 == (MAX_PROFILE/10)) ? (MAX_PROFILE%10) : 9))) {
+                        profile_sel_menu = prof_x10*10 + ((i+1)%10);
+                        retval = load_profile();
+                        sniprintf(menu_row2, LCD_ROW_LEN+1, "%s", (retval==0) ? "Done" : "Failed");
+                        ui_disp_menu(1);
+                        usleep(500000);
                         break;
+                    } else if (i == RC_PROF_HOTKEY) {
+                        prof_x10 = (prof_x10+1) % ((MAX_PROFILE/10)+1);
+                        btn_vec_prev = btn_vec;
+                        goto Prof_Hotkey_Prompt;
+                    } else if (i == RC_BACK) {
+                        break;
+                    }
                 }
 
-                if (i <= RC_BTN0) {
-                    profile_sel = (i+1)%10;
-                    load_profile();
-                    break;
-                } else if (i == RC_BACK) {
-                    break;
-                }
-
+                btn_vec_prev = btn_vec;
                 usleep(WAITLOOP_SLEEP_US);
             }
-            lcd_write_status();
+
             menu_active = 0;
+            osd->osd_config.menu_active = 0;
+            ui_disp_status(0);
+            break;
+        case RC_RIGHT:
+            if (!menu_active)
+                man_target_input = next_input;
             break;
         default: break;
     }
 
+    sys_ctrl ^= REMOTE_EVENT;
+
 Button_Check:
-    if (btn_code_prev == 0) {
-        if (btn_code & PB0_BIT)
-            target_input = (cm.avinput == AV3_YPBPR) ? AV1_RGBs : (cm.avinput+1);
-        if (btn_code & PB1_BIT)
-            tc.sl_mode = tc.sl_mode < SL_MODE_MAX ? tc.sl_mode + 1 : 0;
+    if (btn_code & PB0_BIT)
+        man_target_input = next_input;
+    if (btn_code & PB1_BIT)
+        tc.sl_mode = tc.sl_mode < SL_MODE_MAX ? tc.sl_mode + 1 : 0;
+
+    if (man_target_input != AV_LAST) {
+        target_input = man_target_input;
+        ret = 1;
     }
+
+    sys_ctrl &= ~(3<<LCD_BL_TIMEOUT_OFFS);
+    if (!menu_active)
+        sys_ctrl |= (lcd_bl_timeout << LCD_BL_TIMEOUT_OFFS);
+
+    IOWR_ALTERA_AVALON_PIO_DATA(PIO_0_BASE, sys_ctrl);
+
+    return ret;
 }

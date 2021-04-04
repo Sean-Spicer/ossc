@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2015-2017  Markus Hiienkari <mhiienka@niksula.hut.fi>
+// Copyright (C) 2015-2019  Markus Hiienkari <mhiienka@niksula.hut.fi>
 //
 // This file is part of Open Source Scan Converter project.
 //
@@ -25,13 +25,6 @@
 #include "tvp7002.h"
 
 #define DEFAULT_ON              1
-#define DEFAULT_PRE_COAST       1
-#define DEFAULT_POST_COAST      0
-#define DEFAULT_SAMPLER_PHASE   16
-#define DEFAULT_SYNC_LPF        3
-#define DEFAULT_SYNC_VTH        11
-#define DEFAULT_FINE_GAIN       26
-#define DEFAULT_FINE_OFFSET     0x80
 
 extern mode_data_t video_modes[], video_modes_default[];
 extern alt_u8 update_cur_vm;
@@ -46,17 +39,18 @@ const avconfig_t tc_default = {
     .pm_384p = 1,
     .pm_480i = 1,
     .pm_1080i = 1,
-    .tvp_hpll2x = 1,
-    .sampler_phase = DEFAULT_SAMPLER_PHASE,
+    .tvp_hpll2x = DEFAULT_ON,
     .sync_vth = DEFAULT_SYNC_VTH,
     .linelen_tol = DEFAULT_LINELEN_TOL,
     .vsync_thold = DEFAULT_VSYNC_THOLD,
     .sync_lpf = DEFAULT_SYNC_LPF,
     .pre_coast = DEFAULT_PRE_COAST,
     .post_coast = DEFAULT_POST_COAST,
+    .sl_altern = 1,
 #ifdef ENABLE_AUDIO
     .audio_dw_sampl = DEFAULT_ON,
-    .tx_mode = TX_HDMI,
+    .tx_mode = TX_HDMI_RGB,
+    .audio_gain = AUDIO_GAIN_0DB,
 #endif
     .col = {
         .r_f_gain = DEFAULT_FINE_GAIN,
@@ -65,14 +59,19 @@ const avconfig_t tc_default = {
         .r_f_off = DEFAULT_FINE_OFFSET,
         .g_f_off = DEFAULT_FINE_OFFSET,
         .b_f_off = DEFAULT_FINE_OFFSET,
+        .c_gain = DEFAULT_COARSE_GAIN,
     },
+    .link_av = AV_LAST,
+    .clamp_offset = SIGNED_NUMVAL_ZERO,
+    .alc_h_filter = DEFAULT_ALC_H_FILTER,
+    .alc_v_filter = DEFAULT_ALC_V_FILTER,
 };
 
 int set_default_avconfig()
 {
     memcpy(&tc, &tc_default, sizeof(avconfig_t));
 #ifndef ENABLE_AUDIO
-    tc.tx_mode = !!(IORD_ALTERA_AVALON_PIO_DATA(PIO_1_BASE) & HDMITX_MODE_MASK);
+    tc.tx_mode = (IORD_ALTERA_AVALON_PIO_DATA(PIO_1_BASE) & HDMITX_MODE_MASK) ? TX_DVI : TX_HDMI_RGB;
 #endif
 
     memcpy(video_modes, video_modes_default, VIDEO_MODES_SIZE);
